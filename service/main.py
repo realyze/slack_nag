@@ -103,7 +103,7 @@ def notify_user(auth, user_obj, req):
 
         msg = ("%s, you have a lonely review request waiting on your action at: " +
               "https://review.salsitasoft.com/r/%s") % (pt_user['profile']['real_name'], req['id'])
-        print "sending %s" % (msg,)
+        print " >>> %s" % (msg,)
         _slack.chat.post_message('@' + pt_user['name'], msg)
     except:
         print 'ERROR when notifying user', sys.exc_info()[0]
@@ -136,7 +136,6 @@ def main():
         updated = updated + dateutil.relativedelta.relativedelta(days=+2)
         if updated.replace(tzinfo=None) < datetime.datetime.now():
             last_update = rb.extensions.get_last_update_info(auth, req['id'])
-            print "last update %s: %s" %(req['id'], str(last_update))
             if last_update['type'] == 'review-request':
                 notify_user(auth, req['target_people'][0], req)
                 continue
