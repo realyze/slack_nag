@@ -136,21 +136,19 @@ def main():
         updated = updated + dateutil.relativedelta.relativedelta(days=+2)
         if updated.replace(tzinfo=None) < datetime.datetime.now():
             last_update = rb.extensions.get_last_update_info(auth, req['id'])
+            print 'processing rid', req['id'], last_update['type']
             if last_update['type'] == 'review-request':
                 notify_user(auth, req['target_people'][0], req)
                 continue
             if last_update['type'] == 'diff':
                 notify_user(auth, req['target_people'][0], req)
                 continue
-            if last_update['type'] == 'reply':
+            if last_update['type'] == 'reply' or last_update['type'] == 'review':
                 if last_update['user']['links']['self']['href'] == req['links']['submitter']['href']:
                     # Last review came from request submitter, now it's reviewer's turn.
                     notify_user(auth, req['target_people'][0], req)
                 else:
                     notify_user(auth, req['links']['submitter'], req)
-                continue
-            if last_update['type'] == 'review':
-                notify_user(auth, req['links']['submitter'], req)
                 continue
 
 
