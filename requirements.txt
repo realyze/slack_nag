@@ -3,3 +3,6 @@ simplejson
 termcolor
 logging
 lxml
+
+python-dateutil
+slacker
