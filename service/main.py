@@ -18,6 +18,7 @@
 """
 
 import os
+import sys
 import re
 import rb.extensions
 import pt.api
