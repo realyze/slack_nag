@@ -122,7 +122,7 @@ def main():
     slack_token = config.get('auth', 'slack_token')
 
     _slack = Slacker(slack_token)
-    members = slack.users.list().body['members']
+    members = _slack.users.list().body['members']
     _slack_email_dict = dict([[u['profile']['email'], u] for u in members])
 
     #process_stories(pt_token, {'username': rb_user, 'password': rb_pwd})
