@@ -91,23 +91,26 @@ def process_stories(pt_token, rb_auth):
         process_project(pt_token, project_id, rb_auth)
 
 
-def notify_user(auth, slack_email_dict, user_obj, req):
+def notify_user(auth, user_obj, req):
     try:
         rb_user = rb.extensions.get_user_data(auth, user_obj['href'])
         if not rb_user:
             return
 
-        pt_user = slack_email_dict.get(rb_user['email'], None)
+        pt_user = _slack_email_dict.get(rb_user['email'], None)
         if not pt_user:
             return
 
         if pt_user['name'] == u"tomas.brambora":
             msg = ("%s, you have a lonely review request waiting on your action at: " +
                   "https://review.salsitasoft.com/r/%s") % (pt_user['profile']['real_name'], req['id'])
-            slack.chat.post_message('@' + pt_user['name'], msg)
+            _slack.chat.post_message('@' + pt_user['name'], msg)
     except:
         print 'ERROR when notifying user', sys.exc_info()[0]
 
+
+_slack = None
+_slack_email_dict = {}
 
 def main():
     # Read the sensitive data from a config file.
@@ -118,9 +121,9 @@ def main():
     rb_pwd = config.get('auth', 'rb_pwd')
     slack_token = config.get('auth', 'slack_token')
 
-    slack = Slacker(slack_token)
+    _slack = Slacker(slack_token)
     members = slack.users.list().body['members']
-    slack_email_dict = dict([[u['profile']['email'], u] for u in members])
+    _slack_email_dict = dict([[u['profile']['email'], u] for u in members])
 
     #process_stories(pt_token, {'username': rb_user, 'password': rb_pwd})
     auth = {'username': rb_user, 'password': rb_pwd}
@@ -133,20 +136,20 @@ def main():
             last_update = rb.extensions.get_last_update_info(auth, req['id'])
             print "last update %s: %s" %(req['id'], str(last_update))
             if last_update['type'] == 'review-request':
-                notify_user(auth, slack_email_dict, req['target_people'][0], req)
+                notify_user(auth, req['target_people'][0], req)
                 continue
             if last_update['type'] == 'diff':
-                notify_user(auth, slack_email_dict, req['target_people'][0], req)
+                notify_user(auth, req['target_people'][0], req)
                 continue
             if last_update['type'] == 'reply':
                 if last_update['user']['links']['self']['href'] == req['links']['submitter']['href']:
                     # Last review came from request submitter, now it's reviewer's turn.
-                    notify_user(auth, slack_email_dict, req['target_people'][0], req)
+                    notify_user(auth, req['target_people'][0], req)
                 else:
-                    notify_user(auth, slack_email_dict, req['links']['submitter'], req)
+                    notify_user(auth, req['links']['submitter'], req)
                 continue
             if last_update['type'] == 'review':
-                notify_user(auth, slack_email_dict, req['links']['submitter'], req)
+                notify_user(auth, req['links']['submitter'], req)
                 continue
 
 
