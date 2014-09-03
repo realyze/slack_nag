@@ -101,10 +101,9 @@ def notify_user(auth, user_obj, req):
         if not pt_user:
             return
 
-        if pt_user['name'] == u"tomas.brambora":
-            msg = ("%s, you have a lonely review request waiting on your action at: " +
-                  "https://review.salsitasoft.com/r/%s") % (pt_user['profile']['real_name'], req['id'])
-            _slack.chat.post_message('@' + pt_user['name'], msg)
+        msg = ("%s, you have a lonely review request waiting on your action at: " +
+              "https://review.salsitasoft.com/r/%s") % (pt_user['profile']['real_name'], req['id'])
+        _slack.chat.post_message('@' + pt_user['name'], msg)
     except:
         print 'ERROR when notifying user', sys.exc_info()[0]
 
