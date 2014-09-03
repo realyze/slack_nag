@@ -1,0 +1,100 @@
+Salsita Workflow Plugin
+=======================
+This Mercurial extension automates the actions required by the [Salsita worklow][workflow_diagram].
+
+[workflow_diagram]: https://sites.google.com/a/salsitasoft.com/wiki/internal/the-workflow
+
+
+Installation
+------------
+
+1. Grab the sources from <https://dev.salsitasoft.com/rc/hgplugin> and put them somewhere where they can stay.
+
+    (Elmo says: _Elmo would not save such files in, say, like "/tmp"_)
+
+1. ##### IMPORTANT! (**Windows users only**)
+    Edit the \_\_init\_\_.py file and delete the following line:
+
+    `demandimport.disable()`
+
+    TortoiseHg workbench (and/or some other extensions) will not work otherwise.
+
+1. Install dependencies:
+
+   ###### Mac OS & Linux.
+
+
+        `pip install -r requirements.txt`
+
+    If you want to run unit tests, you will also need:
+
+        `pip install -r requirements-dev.txt`
+
+    (Elmo says: _If Elmo was not going to develop the plugin himself, he probably wouldn't install those._)
+
+   ###### Windows
+
+
+    If you are on Windows, it's not that simple. Here's what you do:
+
+    (Please note that it's **REALLY IMPORTANT** that you install 64 bit ports of the SW if you're running a 64 bit Windows box. You might get all sorts of weird errors otherwise.)
+
+    1. Install **Python 2.7** (from http://www.python.org/getit/).
+
+    2. Install **setuptools** from http://pypi.python.org/pypi/setuptools
+
+    3. Add "C:\Python;C:\Python27\Scripts" (or wherever you installed your Python) to your PATH so that you can run `python` and other commands from anywhere.
+
+        3b. Run `easy_install pip` to install **pip** (standard Python package manager).
+
+    4. You will need to install **Mercurial**. It's important that you install the correct one. The one bundled with TortoiseHg cripples PYTHONPATH and thus makes the workflow plugin unusable.
+        4a. If you have Mercurial installed, please uninstall it.
+
+        4b. Download Mercurial from http://mercurial.selenic.com/wiki/Download/ You want the one that says "This is recommended for hgweb setups and extensions with non-standard dependencies."
+
+        4c. Install Mercurial. If you want TortoiseHg, install it afterwards (just don't install the bundle first).
+
+    5. Go to the directory where this file has been cloned to (i.e., the workflow plugin repository root).
+
+    6. Install **plugin dependencies**. Run "pip install -r requirements.txt". It will most probably fail when installing lxml, because lxml is a pain to install using pip on Windows. However because lxml comes last in the requirements.txt file, the other dependencies should be installed.
+
+    7. Download & install **lxml** binary from http://pypi.python.org/pypi/lxml/2.3#downloads
+
+
+1. Add this to your ${HOME}/.hgrc:
+
+        [extensions]
+        workflow = /Users/elmo/src/workflow_plugin/
+
+        [workflow]
+        token = <your PT token>
+
+        [reviewboard]
+        server = https://dev.salsitasoft.com/rb/
+        user = <your RB username>
+
+     to make Mercurial aware of the extension, set Pivotal Tracker & ReviewBoard auth info and set the ReviewBoard server URL.  
+
+     __PT token__ can be found at the bottom of your Pivotal Tracker profile page (<https://www.pivotaltracker.com/profile>). You might need to generate the token first if you never used it.
+
+1. Add the following to your project's .hg/hgrc file:
+
+        [workflow]
+        project_id = <Your PT project ID>
+
+        [reviewboard]
+        repoid = <Review Board project repository id>
+
+    You can get the repoid by running the 'hg postreview' commands (if you have the post review extension installed). It will list your projects and their ids.
+
+    You can copy the PT __project_id__ number from the URL when you go to the project's page (e.g. https://www.pivotaltracker.com/projects/**123456**). 
+
+
+Usage
+-----
+Type `hg help workflow` to list the available commands and their usage.
+
+
+.hgrc Options
+-------------
+`no_backup_files=True` … If set, no backup files are generated when using the "--clean" flag to revert uncommited changes (for any command that accepts the "--clean" flag). Don't set it if you want the backup files to be created (which is the default setting).

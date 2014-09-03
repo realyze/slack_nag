@@ -1,0 +1,15 @@
+id        | name                                      | iteration | story_type | current_state
+42        | As a user1, I want bar1, so that baz1.    | current   | feature    | unscheduled
+43        | As a user2, I want bar2, so that baz2.    | current   | bug        | unscheduled
+44        | As a user3, I want bar3, so that baz3.    | current   | chore      | started
+45        | As a user4, I want bar4, so that baz4.    | current   | release    | unscheduled
+60        | As a user5, I want bar5, so that baz5.    | backlog   | feature    | unscheduled
+61        | As a user6, I want bar6, so that baz6.    | backlog   | bug        | started
+62        | As a user7, I want bar7, so that baz7.    | backlog   | chore      | unscheduled
+63        | As a user8, I want bar8, so that baz8.    | backlog   | release    | unscheduled
+101       | As a user9, I want bar9, so that baz9.    | icebox    | feature    | unscheduled
+102       | As a user10, I want bar10, so that baz10. | icebox    | bug        | unscheduled
+103       | As a user11, I want bar11, so that baz11. | icebox    | chore      | unscheduled
+104       | As a user12, I want bar12, so that baz12. | icebox    | release    | unscheduled
+64        | As a user8, I want bar13, so that baz13.  | backlog   | bug        | finished
+64        | As a user8, I want bar13, so that baz13.  | backlog   | bug        | delivered
