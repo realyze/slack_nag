@@ -103,7 +103,7 @@ def notify_user(auth, slack_email_dict, user_obj, req):
 
         if pt_user['name'] == u"tomas.brambora":
             msg = ("%s, you have a lonely review request waiting on your action at: " +
-                  "https://review.salsitasoft.com/r/%s" % (pt_user['profile']['real_name'], req['id']))
+                  "https://review.salsitasoft.com/r/%s") % (pt_user['profile']['real_name'], req['id'])
             slack.chat.post_message('@' + pt_user['name'], msg)
     except:
         print 'ERROR when notifying user', sys.exc_info()[0]
