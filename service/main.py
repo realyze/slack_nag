@@ -113,6 +113,8 @@ _slack = None
 _slack_email_dict = {}
 
 def main():
+    global _slack
+    global _slack_email_dict
     # Read the sensitive data from a config file.
     config = ConfigParser.RawConfigParser()
     config.read(CFG_FILE)
