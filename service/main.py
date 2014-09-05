@@ -25,9 +25,11 @@ import pt.api
 import config
 import ConfigParser
 import dateutil.parser
-import dateutil.relativedelta
 import datetime
+
 from slacker import Slacker
+from dateutil.tz import tzlocal
+from dateutil.relativedelta import relativedelta as delta
 
 CFG_FILE = '%s/.workflow.cfg' % os.environ['HOME']
 
@@ -101,9 +103,26 @@ def notify_user(auth, user_obj, req):
         if not pt_user:
             return
 
+        last_updated = dateutil.parser.parse(req['last_updated'])
+        now = datetime.datetime.now(tzlocal())
+        idle_days = delta(now, last_updated).days
+        idle_hours = delta(now, last_updated).hours + 24 * idle_days
+
+        if idle_hours < 20:
+            print ("review request %s from %s has been idle for %s hours => not nagging" % 
+                (req['id'], pt_user['profile']['real_name'], idle_hours))
+            return
+
         msg = ("%s, you have a lonely review request waiting on your action at: " +
-              "https://review.salsitasoft.com/r/%s") % (pt_user['profile']['real_name'], req['id'])
+              "https://review.salsitasoft.com/r/%s .") % (pt_user['profile']['real_name'], req['id'])
+
+        if idle_days > 2:
+            msg += ("**This is getting serious**. " +
+                "It's been lying there for **%s days** now!" % (idle_days,))
+
         print " >>> %s" % (msg,)
+        print " >>> idle for: %s days" % (idle_days,)
+
         _slack.chat.post_message('@' + pt_user['name'], msg)
     except:
         print 'ERROR when notifying user', sys.exc_info()[0]
@@ -123,30 +142,40 @@ def main():
     rb_pwd = config.get('auth', 'rb_pwd')
     slack_token = config.get('auth', 'slack_token')
 
+    # HACK: Set the gobal vars.
     _slack = Slacker(slack_token)
     members = _slack.users.list().body['members']
     _slack_email_dict = dict([[u['profile']['email'], u] for u in members])
 
-    #process_stories(pt_token, {'username': rb_user, 'password': rb_pwd})
     auth = {'username': rb_user, 'password': rb_pwd}
+
+    # Returns all published unshipped requests.
     reqs = rb.extensions.get_review_requests2(
         {'max-results': 200, 'ship-it': 0}, auth)
+
     for req in reqs:
-        updated = dateutil.parser.parse(req['last_updated'])
-        updated = updated + dateutil.relativedelta.relativedelta(days=+2)
-        if updated.replace(tzinfo=None) < datetime.datetime.now():
+        added = dateutil.parser.parse(req['time_added'])
+        # Check review request is at least two days old.
+        if (added + delta(days=+2)) < datetime.datetime.now(tzlocal()):
             last_update = rb.extensions.get_last_update_info(auth, req['id'])
+
             print 'processing rid', req['id'], last_update['type']
+
             if last_update['type'] == 'review-request':
-                notify_user(auth, req['target_people'][0], req)
+                for reviewer in req['target_people']:
+                    notify_user(auth, reviewer, req)
                 continue
+
             if last_update['type'] == 'diff':
-                notify_user(auth, req['target_people'][0], req)
+                for reviewer in req['target_people']:
+                    notify_user(auth, reviewer, req)
                 continue
+
             if last_update['type'] == 'reply' or last_update['type'] == 'review':
                 if last_update['user']['links']['self']['href'] == req['links']['submitter']['href']:
                     # Last review came from request submitter, now it's reviewer's turn.
-                    notify_user(auth, req['target_people'][0], req)
+                    for reviewer in req['target_people']:
+                        notify_user(auth, reviewer, req)
                 else:
                     notify_user(auth, req['links']['submitter'], req)
                 continue
