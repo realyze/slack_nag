@@ -117,8 +117,8 @@ def notify_user(auth, user_obj, req):
               "https://review.salsitasoft.com/r/%s .") % (pt_user['profile']['real_name'], req['id'])
 
         if idle_days > 2:
-            msg += ("**This is getting serious**. " +
-                "It's been lying there for **%s days** now!" % (idle_days,))
+            msg += ("*This is getting serious*. " +
+                "It's been lying there for *%s days* now!" % (idle_days,))
 
         print " >>> %s" % (msg,)
         print " >>> idle for: %s days" % (idle_days,)
