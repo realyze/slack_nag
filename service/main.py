@@ -67,10 +67,9 @@ def notify_user(auth, user_obj, req):
             (req['id'], pt_user['profile']['real_name'], idle_hours))
         return
 
-    msg = ("%s, you have a lonely review request from %s (repo %s) waiting on your action at: " +
+    msg = ("%s, you have a lonely review request (repo %s) waiting on your action at: " +
           "https://review.salsitasoft.com/r/%s .") % (
                   pt_user['profile']['real_name'],
-                  req['links']['submitter']['title'],
                   req['links']['repository']['title'],
                   req['id'])
 
