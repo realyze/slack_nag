@@ -80,7 +80,7 @@ def notify_user(auth, user_obj, req):
     print " >>> %s" % (msg,)
     print " >>> idle for: %s days" % (idle_days,)
 
-    #_slack.chat.post_message('@' + pt_user['name'], msg)
+    _slack.chat.post_message('@' + pt_user['name'], msg)
 
 
 def get_work_days_diff(a, b):
