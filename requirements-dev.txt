@@ -1,6 +1,0 @@
-flask
-pyvows
-nose
-mock
-freshen
-mercurial

@@ -21,8 +21,6 @@ import os
 import sys
 import re
 import rb.extensions
-import pt.api
-import config
 import ConfigParser
 import dateutil.parser
 import datetime
@@ -30,102 +28,67 @@ import datetime
 from slacker import Slacker
 from dateutil.tz import tzlocal
 from dateutil.relativedelta import relativedelta as delta
+from dateutil import rrule
 
 CFG_FILE = '%s/.workflow.cfg' % os.environ['HOME']
 
 
-def is_story_approved(story_id, rb_auth):
-    return rb.extensions.is_story_approved(
-        'https://review.salsitasoft.com', story_id, rb_auth)
+class RB_daemon_error(Exception):
+    pass
 
 
-def iter_unprocessed(stories):
-    for story in stories:
-        if 'reviewed' in story.labels:
-            # Skip stories that have already been processed by us.
-            continue
-        if (story.story_type in ['feature', 'bug']) and story.state == 'finished':
-            # Handle finished features and bugs.
-            yield story
+def try_except(fn):
+    def wrapped(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except Exception, e:
+            et, ei, tb = sys.exc_info()
+            raise RB_daemon_error, RB_daemon_error(e), tb
+    return wrapped
 
 
-def iter_rejected(stories):
-    for story in stories:
-        if (story.story_type in ['feature', 'bug']) and story.state == 'rejected':
-            print str(story.id) + ' is rejected'
-            yield story
-
-
-def process_project(pt_token, project_id, rb_auth):
-    # We're only interested in stories that are finished and don't have the
-    # 'reviewed' label.
-    stories = pt.api.get_stories_for_project_id(project_id, pt_token)
-
-    # Filter out stories that have any open review requests.
-    approved_stories = [s for s in iter_unprocessed(stories) if
-        is_story_approved(s.id, rb_auth)]
-
-    # Add a 'reviewed' label to the stories that survived our filtering.
-    for s in approved_stories:
-        pt.api.append_label_to_a_story(
-            project_id, s.id, pt_token, config.pt_reviewed_label)
-
-    for s in iter_rejected(stories):
-        version = get_release(s)
-        if version:
-            labels = [l for l in s.labels if
-                not re.match('release-[0-9]+(.[0-9]+){2}$', l)]
-            labels.append('rejected-' + version)
-            pt.api.replace_labels_in_a_story(
-                project_id, s.id, pt_token, labels)
-
-
-def get_release(story):
-    for label in story.labels:
-        m = re.match('release-([0-9]+([.][0-9]+){2})$', label)
-        if m:
-            return m.groups()[0]
-
-
-def process_stories(pt_token, rb_auth):
-    project_ids = pt.api.get_all_user_projects(pt_token)
-    for project_id in project_ids:
-        process_project(pt_token, project_id, rb_auth)
-
-
+@try_except
 def notify_user(auth, user_obj, req):
-    try:
-        rb_user = rb.extensions.get_user_data(auth, user_obj['href'])
-        if not rb_user:
-            return
+    rb_user = rb.extensions.get_user_data(auth, user_obj['href'])
+    if not rb_user:
+        return
 
-        pt_user = _slack_email_dict.get(rb_user['email'], None)
-        if not pt_user:
-            return
+    pt_user = _slack_email_dict.get(rb_user['email'], None)
+    if not pt_user:
+        return
 
-        last_updated = dateutil.parser.parse(req['last_updated'])
-        now = datetime.datetime.now(tzlocal())
-        idle_days = delta(now, last_updated).days
-        idle_hours = delta(now, last_updated).hours + 24 * idle_days
+    last_updated = dateutil.parser.parse(req['last_updated'])
+    now = datetime.datetime.now(tzlocal())
+    idle_days = delta(now, last_updated).days
+    idle_hours = delta(now, last_updated).hours + 24 * idle_days
 
-        if idle_hours < 20:
-            print ("review request %s from %s has been idle for %s hours => not nagging" % 
-                (req['id'], pt_user['profile']['real_name'], idle_hours))
-            return
+    if idle_hours < 20:
+        print ("review request %s from %s has been idle for %s hours => not nagging" % 
+            (req['id'], pt_user['profile']['real_name'], idle_hours))
+        return
 
-        msg = ("%s, you have a lonely review request waiting on your action at: " +
-              "https://review.salsitasoft.com/r/%s .") % (pt_user['profile']['real_name'], req['id'])
+    msg = ("%s, you have a lonely review request from %s (repo %s) waiting on your action at: " +
+          "https://review.salsitasoft.com/r/%s .") % (
+                  pt_user['profile']['real_name'],
+                  req['links']['submitter']['title'],
+                  req['links']['repository']['title'],
+                  req['id'])
 
-        if idle_days > 2:
-            msg += ("*This is getting serious*. " +
-                "It's been lying there for *%s days* now!" % (idle_days,))
+    if idle_days > 2:
+        msg += ("*This is getting serious*. " +
+            "It's been lying there for *%s days* now!" % (idle_days,))
 
-        print " >>> %s" % (msg,)
-        print " >>> idle for: %s days" % (idle_days,)
+    print " >>> %s" % (msg,)
+    print " >>> idle for: %s days" % (idle_days,)
 
-        _slack.chat.post_message('@' + pt_user['name'], msg)
-    except:
-        print 'ERROR when notifying user', sys.exc_info()[0]
+    #_slack.chat.post_message('@' + pt_user['name'], msg)
+
+
+def get_work_days_diff(a, b):
+    return len(list(rrule.rrule(rrule.DAILY,
+        dtstart=a,
+        until=b,
+        byweekday=(rrule.MO, rrule.TU, rrule.WE, rrule.TH, rrule.FR))))
 
 
 _slack = None
@@ -134,9 +97,11 @@ _slack_email_dict = {}
 def main():
     global _slack
     global _slack_email_dict
+
     # Read the sensitive data from a config file.
     config = ConfigParser.RawConfigParser()
     config.read(CFG_FILE)
+
     pt_token = config.get('auth', 'pt_token')
     rb_user = config.get('auth', 'rb_user')
     rb_pwd = config.get('auth', 'rb_pwd')
@@ -156,7 +121,8 @@ def main():
     for req in reqs:
         added = dateutil.parser.parse(req['time_added'])
         # Check review request is at least two days old.
-        if (added + delta(days=+2)) < datetime.datetime.now(tzlocal()):
+        days_delta = get_work_days_diff(added, datetime.datetime.now(tzlocal()))
+        if days_delta >= 2:
             last_update = rb.extensions.get_last_update_info(auth, req['id'])
 
             print 'processing rid', req['id'], last_update['type']
